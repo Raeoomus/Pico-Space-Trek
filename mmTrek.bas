@@ -39,6 +39,7 @@ Const dirNW=8
 Const dirN2=9
 
 Const IntroMusic=0
+Const KlingShields=200
 
 Const FCEr$="?FC ERROR"
 Const CoCoFont=4 '32x20
@@ -498,7 +499,7 @@ End Sub
 Sub CombatAreaMsg
   '250
   Local msg$
-  msg$="COMBAT AREA  .. CONDITION RED -"
+  msg$="COMBAT AREA .. CONDITION RED -  "
   msg$=msg$+"SHIELDS ARE DANGEROUSLY LOW."
   Print msg$
 End Sub
@@ -549,6 +550,7 @@ Function GetAlertColor(n)
 End Function
 
 Sub ShowAlert(n)
+  '1470
   Local c
   If n=stDocked Then
     PrintAt 57,Docked$
@@ -664,6 +666,12 @@ Sub HideLastTorpedo
  BlitChar Q,chrSpace
 End Sub
 
+Sub Do890
+ '890 ?? Launch ??
+ BlitChar Q,214
+ '891 GOTO 910 'MoveTorped
+End Sub
+
 Sub Explosion
   ' 1580 - 1590
   Local Z,ZZ,n
@@ -771,7 +779,10 @@ End Sub
 
 Sub OutOfTime
   '1060
-  ShowMessage "IT IS STARDATE "+Str$(T)
+  Local msg$="IT IS STARDATE "+Str$(T)
+  msg$=msg$+". "
+  ShowMessage msg$
+  Print
   LostGame
 End Sub
 
@@ -810,25 +821,8 @@ End Sub
 Sub ClearQuadrant
   Local X,Y
   For X=1 To 8:For Y=1 To 8
-    SNA(X,Y)=0
+    SNA(X,Y)=snaSpace
   Next Y,X
-End Sub
-
-Sub UpdateTorpedo
-  '1530
-  If ST=stDocked Then P=10 Else P=P-1
-  PrintAt 258,Str$(P,2)
-  PointToMessageArea
-End Sub
-
-Sub UpdateShields
-  ShowShields
-  If G<0 Then
-    Local msg$="THE "+US$
-    msg$=msg$+" WILL BE CONQUERED"
-    PrintAt 320,msg$
-    LostGame
-  EndIf
 End Sub
 
 Sub UpdateStarDate
@@ -854,10 +848,7 @@ Sub SetYellowAlert
   SignalAlert
 End Sub
 
-Sub SetAlertStatus
-  '290
-  ST=stINIT
-
+Sub CheckIfDocked
   '1420
   For Z=U-1 To U+1
 
@@ -870,14 +861,39 @@ Sub SetAlertStatus
   End If
 
   Next
+End Sub
+
+Sub SetAlertStatus
+  CheckIfDocked
 
   '1430
-  If K<>0 Then
+  If K=0 Then
+    Do1450
+  Else
     SetRedAlert
     Return
   End If
+End Sub
 
-  Do1450
+Sub Do1450
+  '1450
+  If E>300 Then
+    ST=stGreen
+    'SignalAlert
+      ShowAlert ST
+    Return
+  Else
+    If E>5*(G/100+1) Then
+      SetYellowAlert
+      Return
+    End If
+  End If
+
+  SetRedAlert
+
+  ShowAlert ST
+  'SignalAlert
+  PointToMessageArea
 End Sub
 
 Sub SignalAlert
@@ -904,6 +920,28 @@ Sub SignalAlert
 
   ShowAlert ST
   PointToMessageArea
+End Sub
+
+Sub UpdateTorpedo
+  '1530
+  If ST=stDocked Then 
+    P=10 
+  Else 
+    P=P-1
+  End If
+  PrintAt 258,Str$(P,2)
+  PointToMessageArea
+End Sub
+
+Sub UpdateShields
+  '1400
+  ShowShields
+  If G<0 Then
+    Local msg$="THE "+US$
+    msg$=msg$+" WILL BE CONQUERED"
+    PrintAt 320,msg$
+    LostGame
+  EndIf
 End Sub
 
 Sub ShowInoperative
@@ -983,6 +1021,51 @@ Sub SystemUpgraded
   PointToMessageArea
 End Sub
 
+Sub EngageWarp
+  If DNA(1)<0 And W>.2 Then
+    Print DSA$(1);
+    Print " DAMAGED, MAX. SPEED IS ";
+    Print "WARP 0.2"
+    W=.25
+  Else
+    If W<.9 Then W=W*1.25
+  End If
+
+  UpgradeSystem
+  MoveShip
+End Sub
+
+Sub MoveShip
+  '560-590
+  KlingonAttack
+  N=W*8:F=E/(5*(G/100+1))
+  If N<=F Then 
+    F=0 
+  Else 
+    N=F:F=1
+  End If
+  X=U:Y=V:SNA(X,Y)=snaSpace
+  GetCourseDelta
+
+  For H=1 To N
+    GetCourseResult
+    'ON Z GOTO 590,600,680
+    Select Case Z
+      'Case 1
+        'Next
+      Case 2
+        ShipCrashed
+        Return
+      Case 3
+        CalculateJump
+        Return
+    End Select
+  Next
+  If F=0 Then SetShipInQuadrant:Return
+  H=H-1
+  Arriving
+End Sub
+
 Sub ShipCrashed
   '600
   If M2<>0 Then
@@ -990,10 +1073,10 @@ Sub ShipCrashed
     For I=1 To 8
       DNA(I)=DNA(I)-Rand(M2+1)+1
     Next
-    If M2=5 Then Do630:Return
+    If M2=5 Then ShipCrashBounce:Return
   End If
   Print "NAVIGATIONAL ERROR: ";
-  Do630
+  ShipCrashBounce
 End Sub
 
 Sub CalculateJump
@@ -1013,40 +1096,149 @@ Sub CalculateJump
   EnterQuadrant
 End Sub
 
-Sub MoveShip
-  '560-590
-  KlingonAttack
-  N=W*8:F=E/(5*(G/100+1))
-  If N<=F Then F=0 Else N=F:F=1
-  X=U:Y=V:SNA(X,Y)=0
-  GetCourseDelta
-
-  For H=1 To N
-    GetCourseResult
-    'ON Z GOTO 590,600,680
-    Select Case Z
-      'Case 1
-        'Next
-      Case 2
-        ShipCrashed
-        Exit For
-      Case 3
-        CalculateJump
-        Exit For
-    End Select
-  Next
-  If F=0 Then SetShipInQuadrant
-  H=H-1
-  Arriving
-End Sub
-
 Sub Arriving
   '620
   CheckEnergy
   ClearMessageArea
   Print "ENERGY DEPLETED  - ";
-  Pause 2055
   ShipCrashBounce
+End Sub
+
+Sub AddBases2Sector
+  '270
+  If B<>0 Then
+    For I=1 To B
+   PickUnusedSector
+   SNA(X,Y)=snaBase
+ Next
+  End If
+End Sub
+
+Sub AddStars2Sector
+  '280
+  If S<>0 Then
+    For I=1 To S
+   PickUnusedSector
+   SNA(X,Y)=snaStar
+    Next
+  End If
+End Sub
+
+Sub AddKlingons2Sect
+  '1330
+  If K<>3 Then If Rand(10)>7 Then CL=1
+  For I=1 To 3:KNA(I,3)=-1:Next
+  For I=1 To K
+    PickUnusedSector
+    SNA(X,Y)=CL+1'appearance
+    KNA(I,1)=X
+    KNA(I,2)=Y
+    KNA(I,3)=KlingShields
+  Next
+End Sub
+
+Sub DockAtBase
+  '1610
+  If ST=stDocked Then Return
+  ClearMessageArea
+  PrintAt 320,"SHIELDS DROPPED FOR DOCKING"
+  InitShip
+  SignalAlert
+End Sub
+
+Sub ReadySector
+  '220
+  X=GNA(L,M)
+  K=Int(X/100):X=X-K*100
+  B=Int(X/10)
+  S=X-B*10
+
+  If K<>0 Then
+
+    If G<=200 Then
+      If Z9=1 Or Z7=1 Then
+        CombatAreaMsg
+      Else
+        CombatAreaMsg2
+        Z9=1
+      End If
+    End If
+
+    '260
+    AddKlingons2Sect
+  End If
+
+  AddBases2Sector
+  AddStars2Sector
+  
+  '290
+  ST=stINIT 
+
+End Sub
+
+Sub EnterQuadrant
+  '210
+  'This quadrant vars:
+  ' CL=Cloaking flag, K=Klingon count
+  ' B=base count, S=star count
+  CL=0:K=0:B=0:S=0
+  'ClearQuadrant
+  SNA(U,V)=snaShip
+
+  'If within galaxy...
+  If L>=1 And L<=8 And M>=1 And M<=8 Then
+    ReadySector
+  End If
+
+  SetAlertStatus
+  UpdateCoords
+
+  If CL=1 Then
+    ShowCloakMsg
+  End If
+
+  If DNA(2)<0 Then
+    O=0:A=2
+    ShowInoperative
+  End If
+
+  O=1
+  LocalScanner
+
+  If K<>0 Then
+    If Z7=1 Then
+      If Rand(2)>1 Then
+        KlingonAttack
+      End If
+    Else
+      Z7=1
+    End If
+  End If
+
+End Sub
+
+Sub ScanQuandrant
+  '300
+  UpdateCoords
+  If CL=1 Then
+    ClearMessageArea
+    ShowCloakMsg
+  End If
+  If DNA(2)<0 Then
+    O=0:A=2
+    ShowInoperative
+    Return
+  End If
+  LocalScanner
+  If K<>0 Then
+    If Z7=1 Then
+      If Rand(2)>1 Then
+        KlingonAttack
+      End If
+    Else
+      Z7=1
+    End If
+  End If
 End Sub
 
 Sub ShipCrashBounce
@@ -1059,6 +1251,7 @@ Sub ShipCrashBounce
 End Sub
 
 Sub SetShipInQuadrant
+  '640
   U=Int(X+.5):V=Int(Y+.5)
   SNA(U,V)=snaShip
   UpdateEnergy
@@ -1089,6 +1282,7 @@ Sub UpdateEnergy
   '1390
   E=E-((N*5)*(G/100+1))
   ShowFuel
+  CheckIfDocked
   UpdateShields
 End Sub
 
@@ -1186,17 +1380,11 @@ Sub GetCourseResult
   Else
     If SNA(C,D)<>0 Then
       Z=2
-      M2=Rnd(2)-1
+      M2=Rand(2)-1
     Else
       Z=1
     End If
   End If
-End Sub
-
-Sub Do890
- '890 ?? Launch ??
- BlitChar Q,214
- '891 GOTO 910 'MoveTorped
 End Sub
 
 Sub TorpedoHitKlingon
@@ -1215,7 +1403,7 @@ End Sub
 Sub ExplodeSector
   '1550
   Explosion
-  SNA(X,Y)=0
+  SNA(X,Y)=snaSpace
   GNA(L,M)=K*100+B*10+S
 End Sub
 
@@ -1223,7 +1411,7 @@ Sub DestroyKlingon
   '1560
   K=K-1
   ExplodeSector
-  SetAlertStatus '?
+  SetAlertStatus
   PrintAt R, "KLINGON DESTROYED"
   R=R+32
   ClearMessageArea
@@ -1253,7 +1441,7 @@ Sub TorpedoHitBase
  DestroySector
  PrintAt 352,"DAMAGE HAS THROWN YOU "
  Print "OFF COURSE"
- C=Rnd(8):W=Rnd(8)/2
+ C=Rand(8):W=Rand(8)/2
  MoveShip
 End Sub
 
@@ -1268,7 +1456,7 @@ End Sub
 Sub DestroySector
   '1550
   Explosion
-  SNA(X,Y)=0
+  SNA(X,Y)=snaSpace
   GNA(L,M)=K*100+B*10+S
 End Sub
 
@@ -1373,174 +1561,19 @@ Sub KlingonAttack
     H=KNA(I,3)
     If H>=1 Then
       J=1
-
-      FlashPhaserDamage
-      'ClearMessageArea
-      KlingonPhaserHit
-      G=G-H
       Print VS$
       msg$=" FROM SECTOR"
       msg$=msg$+Str$(KNA(I,1),2)+", "
       msg$=msg$+Str$(KNA(I,2),2)
       Print msg$;
+      FlashPhaserDamage
+      'ClearMessageArea
+      KlingonPhaserHit(I)
+      G=G-H
     End If
   Next
 
   UpdateShields
-End Sub
-
-Sub AddBases2Sector
-  '270
-  If B<>0 Then
-    For I=1 To B
-   PickUnusedSector
-   SNA(X,Y)=snaBase
- Next
-  End If
-End Sub
-
-Sub AddStars2Sector
-  '280
-  If S<>0 Then
-    For I=1 To S
-   PickUnusedSector
-   SNA(X,Y)=snaStar
-    Next
-  End If
-End Sub
-
-Sub AddKlingons2Sect
-  '1330
-  If K<>3 Then If Rand(10)>7 Then CL=1
-  For I=1 To 3:KNA(I,3)=-1:Next
-  For I=1 To K
-    PickUnusedSector
-    SNA(X,Y)=CL+1'appearance
-    KNA(I,1)=X
-    KNA(I,2)=Y
-    KNA(I,3)=200'shields?
-  Next
-End Sub
-
-Sub DockAtBase
-  '1610
-  If ST=stDocked Then Return
-  ClearMessageArea
-  PrintAt 320,"SHIELDS DROPPED FOR DOCKING"
-  InitShip
-  SignalAlert
-End Sub
-
-Sub Do1450
-  '1450
-  If E>300 Then
-    ST=stGreen
-    'SignalAlert
-      ShowAlert ST
-    Return
-  Else
-    If E>5*(G/100+1) Then
-      SetYellowAlert
-      Return
-    End If
-  End If
-
-  SetRedAlert
-
-  '1470
-  'SignalAlert
-  PointToMessageArea
-End Sub
-
-Sub ReadySector
-  '220
-  X=GNA(L,M)
-  K=Int(X/100):X=X-K*100
-  B=Int(X/10)
-  S=X-B*10
-
-  If K<>0 Then
-
-    If G<=200 Then
-      If Z9=1 Or Z7=1 Then
-        CombatAreaMsg
-      Else
-        CombatAreaMsg2
-        Z9=1
-      End If
-    End If
-
-    '260
-    AddKlingons2Sect
-  End If
-
-  AddBases2Sector
-  AddStars2Sector
-End Sub
-
-Sub EnterQuadrant
-  '210
-  'This quadrant vars:
-  ' CL=Cloaking flag, K=Klingon count
-  ' B=base count, S=star count
-  CL=0:K=0:B=0:S=0
-  'ClearQuadrant
-  SNA(U,V)=snaShip
-
-  'If within galaxy...
-  If L>=1 And L<=8 And M>=1 And M<=8 Then
-    ReadySector
-  End If
-
-  SetAlertStatus
-  UpdateCoords
-
-  If CL=1 Then
-    ShowCloakMsg
-  End If
-
-  If DNA(2)<0 Then
-    O=0:A=2
-    ShowInoperative
-  End If
-
-  O=1
-  LocalScanner
-
-  If K<>0 Then
-    If Z7=1 Then
-      If Rand(2)>1 Then
-        KlingonAttack
-      End If
-    Else
-      Z7=1
-    End If
-  End If
-
-End Sub
-
-Sub ScanQuandrant
-  '300
-  UpdateCoords
-  If CL=1 Then
-    ClearMessageArea
-    ShowCloakMsg
-  End If
-  If DNA(2)<0 Then
-    O=0:A=2
-    ShowInoperative
-    Return
-  End If
-  LocalScanner
-  If K<>0 Then
-    If Z7=1 Then
-      If Rand(2)>1 Then
-        KlingonAttack
-      End If
-    Else
-      Z7=1
-    End If
-  End If
 End Sub
 
 Function PromptForCommand(sys)
@@ -1570,7 +1603,7 @@ Function PromptForCommand(sys)
   PromptForCommand=-1
 End Function
 
-Sub DoStuff
+Sub Do430
   '430
   H=0
   UpdateStarDate
@@ -1615,18 +1648,8 @@ Sub SetCourse
   Loop Until W>=0 And W<=9
 
   If W=0 Then Return
-
-  If DNA(1)<0 And W>.2 Then
-    Print DSA$(1);
-    Print " DAMAGED, MAX. SPEED IS ";
-    Print "WARP 0.2"
-    W=.25
-  Else
-    If W<.9 Then W=W*1.25
-  End If
-
-  UpgradeSystem
-  MoveShip
+  
+  EngageWarp
 End Sub
 
 Sub LocalScanner
@@ -1801,7 +1824,7 @@ Sub ComputerGuidance
   '1290
   If CD<>0 Then
     C=CC:W=CD
-    'TODO: GOTO 470
+    EngageWarp
     Return
   End If
 
@@ -1927,6 +1950,8 @@ End Sub
 
 ' *************************************
 ' Initialization
+' WARNING! Data is read in order it 
+' appears in code. DO NOT CHANGE ORDER!
 ' *************************************
 
 Sub LoadSystems
@@ -2028,7 +2053,7 @@ Sub MainLoop
     Do
 
       CMD=PromptForCommand(Sys)
-
+      
       If Sys=syCMD Then
         Select Case CMD
           Case 1
@@ -2041,7 +2066,7 @@ Sub MainLoop
             RemoteScanner
           Case 4
             FirePhasers
-            'LocalScanner
+            LocalScanner
           Case 5
             PhotonTorpedo
             UpdateCoords
@@ -2081,7 +2106,7 @@ Sub MainLoop
       CycleviewBar
 
       H=H+1
-      If H>280 Then DoStuff
+      If H>280 Then Do430
 
       Pause 45 'Slow down!
     Loop
