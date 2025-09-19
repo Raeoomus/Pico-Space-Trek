@@ -43,7 +43,6 @@ Const KlingShields=200
 
 Const FCEr$="?FC ERROR"
 Const CoCoFont=4 '32x20
-Const PicoVol=3.0
 Const PicoLF=10 '[Enter]
 Const PicoDown=129 'Down arrow
 
@@ -666,10 +665,9 @@ Sub HideLastTorpedo
  BlitChar Q,chrSpace
 End Sub
 
-Sub Do890
- '890 ?? Launch ??
+Sub FixShipAfterTorpedo
+ '890
  BlitChar Q,214
- '891 GOTO 910 'MoveTorped
 End Sub
 
 Sub Explosion
@@ -924,9 +922,9 @@ End Sub
 
 Sub UpdateTorpedo
   '1530
-  If ST=stDocked Then 
-    P=10 
-  Else 
+  If ST=stDocked Then
+    P=10
+  Else
     P=P-1
   End If
   PrintAt 258,Str$(P,2)
@@ -1039,9 +1037,9 @@ Sub MoveShip
   '560-590
   KlingonAttack
   N=W*8:F=E/(5*(G/100+1))
-  If N<=F Then 
-    F=0 
-  Else 
+  If N<=F Then
+    F=0
+  Else
     N=F:F=1
   End If
   X=U:Y=V:SNA(X,Y)=snaSpace
@@ -1108,9 +1106,9 @@ Sub AddBases2Sector
   '270
   If B<>0 Then
     For I=1 To B
-   PickUnusedSector
-   SNA(X,Y)=snaBase
- Next
+      PickUnusedSector
+      SNA(X,Y)=snaBase
+    Next
   End If
 End Sub
 
@@ -1118,8 +1116,8 @@ Sub AddStars2Sector
   '280
   If S<>0 Then
     For I=1 To S
-   PickUnusedSector
-   SNA(X,Y)=snaStar
+      PickUnusedSector
+      SNA(X,Y)=snaStar
     Next
   End If
 End Sub
@@ -1170,9 +1168,9 @@ Sub ReadySector
 
   AddBases2Sector
   AddStars2Sector
-  
+
   '290
-  ST=stINIT 
+  ST=stINIT
 
 End Sub
 
@@ -1411,7 +1409,8 @@ Sub DestroyKlingon
   '1560
   K=K-1
   ExplodeSector
-  SetAlertStatus
+  'SetAlertStatus
+  ShowAlert ST
   PrintAt R, "KLINGON DESTROYED"
   R=R+32
   ClearMessageArea
@@ -1488,7 +1487,7 @@ Sub MoveTorpedo
   Case 3
    HideLastTorpedo '900
   Case 4
-   Do890 '890
+   FixShipAfterTorpedo '890
   Case 5
    inMotion=0
    TorpedoHitStar '940
@@ -1556,6 +1555,7 @@ Sub KlingonAttack
   End If
 
   ClearMessageArea
+  PointToMessageArea
   R=320
   For I=1 To 3
     H=KNA(I,3)
@@ -1603,21 +1603,43 @@ Function PromptForCommand(sys)
   PromptForCommand=-1
 End Function
 
-Sub Do430
+Sub KlingonsEnterQuadrant
+  If L>0 And L<9 And M>0 And M<9 Then
+    For N=1 To 8
+      For Q=1 To 8
+        X=Int(G(N,Q)/100)
+        If X<>0 Then
+          G(N,Q)=G(N,Q)-X*100
+          G(L,M)=G(L,M)+X*100
+          K=X
+          ClearMessageArea
+          Print "KLINGONS HAVE JUST ENTERED THIS QUADRANT"
+          AddKlingons2Sect
+          SetAlertStatus
+        End If
+      Next Q
+    Next N
+  End If
+End Sub
+
+Sub IdleEvent
   '430
   H=0
   UpdateStarDate
   PointToMessageArea
-'433 GOSUB 490
-'434 IF K<>0 THEN IF RND(2)>1 THEN GOSUB 1020:GOTO 340 ELSE 340 ELSE IF RND(10)<9 THEN 340 ELSE GOSUB 1520:IF L<1 OR L>8 OR M<1 OR M>8 THEN 340 ELSE FOR N=1 TO 8:FOR Q=1 TO 8:X=INT(G(N,Q)/100):IF X=0 THEN NEXT Q,N
-'440 G(N,Q)=G(N,Q)-X*100
-'441 G(L,M)=G(L,M)+X*100
-'442 K=X
-'443 PRINT "KLINGONS HAVE JUST ENTERED THIS QUADRANT"
-'444 GOSUB 1640
-'445 GOSUB 1330
-'446 GOSUB 1420
-'447 GOTO 300
+  UpgradeSystem
+
+  If K<>0 Then
+    If Rnd(2)>1 Then
+      KlingonAttack
+      Return
+    End If
+  Else
+    If Rnd(10)>8 Then
+      GoSub 1520
+      KlingonsEnterQuadrant
+    End If
+  End If
 End Sub
 
 ' *************************************
@@ -1648,7 +1670,7 @@ Sub SetCourse
   Loop Until W>=0 And W<=9
 
   If W=0 Then Return
-  
+
   EngageWarp
 End Sub
 
@@ -1707,7 +1729,7 @@ Sub FirePhasers
     PointToMessageArea
     Z7=1
     If DNA(8)<0 Then
-      Print D$(8);" FAILURE-MANUALLY ";
+      Print DSA$(8);" FAILURE-MANUALLY ";
     End If
     Print "LOCKED ON. ENERGY=";E
     Input "UNITS TO FIRE";F
@@ -1789,8 +1811,8 @@ Sub SetShields
 
   'ClearMessageArea
   PrintAt 352,"ENERGY CONSUMPTION IS NOW"
-  Print " ";Str$(5*(G/100+1))
-  Print "UNITS PER SECTOR"
+  Print " ";Format$(5*(G/100+1),"%3.1f")
+  Print " UNITS PER SECTOR"
 End Sub
 
 Sub DamageReport
@@ -1950,7 +1972,7 @@ End Sub
 
 ' *************************************
 ' Initialization
-' WARNING! Data is read in order it 
+' WARNING! Data is read in order it
 ' appears in code. DO NOT CHANGE ORDER!
 ' *************************************
 
@@ -1978,7 +2000,7 @@ Sub LoadCommands
   Data "MISSION","RECORD"
 End Sub
 
-Sub LoadCNA
+Sub LoadCourseDeltas
   '120,140
   'Course Deltas
   Local X,Y Integer
@@ -2007,7 +2029,7 @@ Sub InitGame
 
   LoadSystems
   LoadCommands
-  LoadCNA
+  LoadCourseDeltas
 
   CLS grn
   Color blk,grn
@@ -2053,13 +2075,11 @@ Sub MainLoop
     Do
 
       CMD=PromptForCommand(Sys)
-      
+
       If Sys=syCMD Then
         Select Case CMD
           Case 1
             SetCourse
-            'L=Rand(8):M=Rand(8)
-            'EnterQuadrant
           Case 2
             LocalScanner
           Case 3
@@ -2106,7 +2126,7 @@ Sub MainLoop
       CycleviewBar
 
       H=H+1
-      If H>280 Then Do430
+      If H>280 Then IdleEvent
 
       Pause 45 'Slow down!
     Loop
