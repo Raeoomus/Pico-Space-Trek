@@ -625,6 +625,7 @@ Sub CycleViewBar
 End Sub
 
 Sub FlashPhaserDamage
+  '1360
   ' Flash for phaser hit
   ' Can I make another framebuffer
   ' that's just a yellow blank screen
@@ -769,6 +770,7 @@ End Sub
 
 Sub LostGame
   '1080
+  Print
   Print "THERE ARE STILL ";
   Print Str$(KT)+" KLINGON "
   Print "BATTLE-CRUISERS SURVIVING."
@@ -786,6 +788,7 @@ End Sub
 
 Sub WinGame
   '1090
+  Print
   Print "LAST BATTLE-CRUISER DESTROYED !"
   Print "THE ";US$;" IS SAVED !!"
   Print "YOUR EFFICIENCY RATED =";
@@ -1021,6 +1024,7 @@ End Sub
 
 Sub EngageWarp
   If DNA(1)<0 And W>.2 Then
+    Print
     Print DSA$(1);
     Print " DAMAGED, MAX. SPEED IS ";
     Print "WARP 0.2"
@@ -1409,11 +1413,10 @@ Sub DestroyKlingon
   '1560
   K=K-1
   ExplodeSector
-  'SetAlertStatus
-  ShowAlert ST
+  SetAlertStatus
+  ClearMessageArea
   PrintAt R, "KLINGON DESTROYED"
   R=R+32
-  ClearMessageArea
   KT=KT-1
   If KT=0 Then WinGame
   Pause 2000
@@ -1561,14 +1564,14 @@ Sub KlingonAttack
     H=KNA(I,3)
     If H>=1 Then
       J=1
-      Print VS$
-      msg$=" FROM SECTOR"
-      msg$=msg$+Str$(KNA(I,1),2)+", "
-      msg$=msg$+Str$(KNA(I,2),2)
-      Print msg$;
       FlashPhaserDamage
       'ClearMessageArea
       KlingonPhaserHit(I)
+      Print VS$;
+      msg$=" FROM SECTOR"
+      msg$=msg$+Str$(KNA(I,1),2)+","
+      msg$=msg$+Str$(KNA(I,2),2)
+      Print msg$;
       G=G-H
     End If
   Next
@@ -1636,7 +1639,7 @@ Sub IdleEvent
     End If
   Else
     If Rnd(10)>8 Then
-      GoSub 1520
+      UpdateStarDate
       KlingonsEnterQuadrant
     End If
   End If
@@ -1676,10 +1679,15 @@ End Sub
 
 Sub LocalScanner
   '310
-  Local Z=38
-  For Y=1 To 8:For X=1 To 8
-    BlitLocalSanner x*2+Z, SNA(X,Y)
-  Next X:Z=Z+32:Next Y
+  IF DNA(2)<0 THEN 
+    O=0:A=2
+    ShowInoperative
+  ELSE
+    Local Z=38
+    For Y=1 To 8:For X=1 To 8
+      BlitLocalSanner x*2+Z, SNA(X,Y)
+    Next X:Z=Z+32:Next Y
+  End if
 End Sub
 
 Sub RemoteScanner
@@ -2080,21 +2088,28 @@ Sub MainLoop
         Select Case CMD
           Case 1
             SetCourse
+            ClearCMD Sys
           Case 2
             LocalScanner
+            ClearCMD Sys
           Case 3
             RemoteScanner
+            ClearCMD Sys
           Case 4
             FirePhasers
             LocalScanner
+            ClearCMD Sys
           Case 5
             PhotonTorpedo
             UpdateCoords
             LocalScanner
+            ClearCMD Sys
           Case 6
             SetShields
+            ClearCMD Sys
           Case 7
             DamageReport
+            ClearCMD Sys
           Case 8
             Sys=syOPT
             ClearCMD Sys
@@ -2108,18 +2123,23 @@ Sub MainLoop
             ClearCMD Sys
           Case 1
             ComputerGuidance
+            ClearCMD Sys
           Case 2
             StatusReport
+            ClearCMD Sys
           Case 3
             TorpedoData
+            ClearCMD Sys
           Case 4
             ComputeCourse
+            ClearCMD Sys
           Case 5
             GuidedTorpedo
             Sys=syCMD
             ClearCMD Sys
           Case 6
             MissionRecord
+            ClearCMD Sys
         End Select
       End If
 
