@@ -2,6 +2,7 @@
 Randomize Timer
 
 'Pico-Space-Trek
+'PicoMite MMBasic Version 5.09.00RC5
 'https://github.com/Raeoomus/Pico-Space-Trek
 'Color Computer Magazine : May 1983,pg40-46
 'https://archive.org/details/color-computer-magazine-1983-05/page/n37/mode/2up
@@ -2139,3 +2140,4 @@ End Sub
 
 InitGame
 MainLoop
+
