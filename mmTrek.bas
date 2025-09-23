@@ -1,8 +1,13 @@
 'Option Explicit
 Randomize Timer
 
+'Pico-Space-Trek
+'https://github.com/Raeoomus/Pico-Space-Trek
 'Color Computer Magazine : May 1983,pg40-46
 'https://archive.org/details/color-computer-magazine-1983-05/page/n37/mode/2up
+'XROAR TRS-80 Color Computer Emulator online
+'https://colorcomputerarchive.com/test/xroar-online/
+
 
 'Direct Commands
 '1 Set Course
@@ -40,6 +45,7 @@ Const dirN2=9
 
 Const IntroMusic=0
 Const KlingShields=200
+Const ShipMaxEnergy=5000
 
 Const FCEr$="?FC ERROR"
 Const CoCoFont=4 '32x20
@@ -557,6 +563,7 @@ Sub ShowAlert(n)
     c=GetAlertColor(n)
     MakeAlert 57,c,0
   End If
+  PointToMessageArea
 End Sub
 
 Sub BlitLocalSanner(n, v)
@@ -700,8 +707,9 @@ Sub InitShip
   '1570
   Local Z
   ST=stDocked
+  'Repair all systems
   For Z=1 To 8:DNA(Z)=0:Next
-  E=5000
+  E=ShipMaxEnergy
   ShowField 122,E,4
   UpdateTorpedo
   G=0 'Shields
@@ -834,71 +842,59 @@ Sub UpdateStarDate
   If T>T0+TT Then OutOfTime
 End Sub
 
-Sub SetRedAlert
-  '1440
-  If ST<>stRed Then
-    ST=stRed
-  End If
-  SignalAlert
-End Sub
-
-Sub SetYellowAlert
-  If ST<>stYellow Then
-    ST=stYellow
-  End If
-  SignalAlert
-End Sub
-
-Sub CheckIfDocked
+Function CheckIfDocked()
   '1420
+  CheckIfDocked=0
   For Z=U-1 To U+1
 
   If Z>=1 And Z<=8 Then
     If SNA(Z,V)=snaBase Then
       Z=U+1
       DockAtBase
-      Return
+      ShowAlert ST
+      CheckIfDocked=1
+      Exit Function
     End If
   End If
 
   Next
-End Sub
+End Function
 
-Sub SetAlertStatus
-  CheckIfDocked
-
-  '1430
-  If K=0 Then
-    Do1450
-  Else
-    SetRedAlert
-    Return
-  End If
-End Sub
-
-Sub Do1450
+Sub CheckEnergyAlert
   '1450
   If E>300 Then
     ST=stGreen
-    'SignalAlert
-      ShowAlert ST
+    ShowAlert ST
     Return
-  Else
-    If E>5*(G/100+1) Then
-      SetYellowAlert
+  End If
+  If E>5*(G/100+1) Then
+    If ST<>stYellow Then
+      ST=stYellow
+      SignalAlert
       Return
-    End If
+  End If
+  ShowAlert ST
+End Sub
+
+Sub SetAlertStatus
+  '1420-1460
+  If CheckIfDocked()=1 Then Return
+
+  If K<1 Then
+    CheckEnergyAlert
+    Return
   End If
 
-  SetRedAlert
-
-  ShowAlert ST
-  'SignalAlert
-  PointToMessageArea
+  If ST<>stRed Then
+    ST=stRed
+    SignalAlert
+  Else
+    ShowAlert ST
+  End If
 End Sub
 
 Sub SignalAlert
-  '1470-1490
+  '1480
   Local FL,ZZ
 
   For FL=1 To 5
@@ -920,7 +916,6 @@ Sub SignalAlert
   Next FL
 
   ShowAlert ST
-  PointToMessageArea
 End Sub
 
 Sub UpdateTorpedo
@@ -1063,7 +1058,10 @@ Sub MoveShip
         Return
     End Select
   Next
-  If F=0 Then SetShipInQuadrant:Return
+  If F=0 Then
+    SetShipInQuadrant
+    Return
+  End If
   H=H-1
   Arriving
 End Sub
@@ -1166,7 +1164,6 @@ Sub ReadySector
       End If
     End If
 
-    '260
     AddKlingons2Sect
   End If
 
@@ -1175,7 +1172,7 @@ Sub ReadySector
 
   '290
   ST=stINIT
-
+  SetAlertStatus
 End Sub
 
 Sub EnterQuadrant
@@ -1192,7 +1189,6 @@ Sub EnterQuadrant
     ReadySector
   End If
 
-  SetAlertStatus
   UpdateCoords
 
   If CL=1 Then
@@ -1211,6 +1207,7 @@ Sub EnterQuadrant
     If Z7=1 Then
       If Rand(2)>1 Then
         KlingonAttack
+        LocalScanner
       End If
     Else
       Z7=1
@@ -1236,6 +1233,7 @@ Sub ScanQuandrant
     If Z7=1 Then
       If Rand(2)>1 Then
         KlingonAttack
+        LocalScanner
       End If
     Else
       Z7=1
@@ -1261,30 +1259,11 @@ Sub SetShipInQuadrant
   ScanQuandrant
 End Sub
 
-Sub DetectDocking
-  '1420
-  For Z=U-1 To U+1
-    If Z>=1 And Z<=8 Then
-      If S(Z,V)=stBase Then
-      Z=U+1
-      DockAtBase
-    End If
-  Next
-
-  If K=0 Then Do1450
-  If ST<>stShip Then
-    ST=stShip
-    SignalAlert
-  End If
-
-  ShowAlert ST
-End Sub
-
 Sub UpdateEnergy
   '1390
   E=E-((N*5)*(G/100+1))
   ShowFuel
-  CheckIfDocked
+  SetAlertStatus
   UpdateShields
 End Sub
 
@@ -1411,11 +1390,12 @@ End Sub
 
 Sub DestroyKlingon
   '1560
+  Local ZZ=R
   K=K-1
   ExplodeSector
   SetAlertStatus
-  ClearMessageArea
-  PrintAt R, "KLINGON DESTROYED"
+  'ClearMessageArea
+  PrintAt ZZ, "KLINGON DESTROYED"
   R=R+32
   KT=KT-1
   If KT=0 Then WinGame
@@ -1451,6 +1431,7 @@ Sub TorpedoMissed
  '960
  PrintAt 352,BSA$(10)
  Print " MISSED."
+ Pause 2000
  KlingonAttack
  ScanQuandrant
 End Sub
@@ -1571,7 +1552,7 @@ Sub KlingonAttack
       msg$=" FROM SECTOR"
       msg$=msg$+Str$(KNA(I,1),2)+","
       msg$=msg$+Str$(KNA(I,2),2)
-      Print msg$;
+      Print msg$'';
       G=G-H
     End If
   Next
@@ -1607,13 +1588,14 @@ Function PromptForCommand(sys)
 End Function
 
 Sub KlingonsEnterQuadrant
+  '430
   If L>0 And L<9 And M>0 And M<9 Then
     For N=1 To 8
       For Q=1 To 8
-        X=Int(G(N,Q)/100)
+        X=Int(GNA(N,Q)/100)
         If X<>0 Then
-          G(N,Q)=G(N,Q)-X*100
-          G(L,M)=G(L,M)+X*100
+          GNA(N,Q)=GNA(N,Q)-X*100
+          GNA(L,M)=GNA(L,M)+X*100
           K=X
           ClearMessageArea
           Print "KLINGONS HAVE JUST ENTERED THIS QUADRANT"
@@ -1679,15 +1661,15 @@ End Sub
 
 Sub LocalScanner
   '310
-  IF DNA(2)<0 THEN 
+  If DNA(2)<0 Then
     O=0:A=2
     ShowInoperative
-  ELSE
+  Else
     Local Z=38
     For Y=1 To 8:For X=1 To 8
       BlitLocalSanner x*2+Z, SNA(X,Y)
     Next X:Z=Z+32:Next Y
-  End if
+  End If
 End Sub
 
 Sub RemoteScanner
