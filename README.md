@@ -13,5 +13,7 @@ https://colorcomputerarchive.com/test/xroar-online/
 Unfortunately, I am unaware of a PicoCalc emulator at this time.
 
 ## Notes
+Currently uses PicoMite MMBasic Version 5.09.00RC5
+
 Still very much a work in progress.
 All the technical challenges should be solved not all systems working yet. A lot of nightmares untangling the GOTO hell of the original.
