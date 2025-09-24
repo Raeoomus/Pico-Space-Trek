@@ -4,6 +4,9 @@ A port of the game Space Trek by Jake Commander for the TRS-80 Color Computer th
 ## ClockworkPi PicoCalc
 https://www.clockworkpi.com/picocalc
 
+## PicoMite MMBasic Manual
+https://geoffg.net/Downloads/picomite/PicoMite_User_Manual.pdf
+
 ## Original TRS-80 Color Computer Code
 https://archive.org/details/color-computer-magazine-1983-05/page/n37/mode/2up
 
