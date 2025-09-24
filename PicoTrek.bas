@@ -9,7 +9,6 @@ Randomize Timer
 'XROAR TRS-80 Color Computer Emulator online
 'https://colorcomputerarchive.com/test/xroar-online/
 
-
 'Direct Commands
 '1 Set Course
 '2 Local Scanner
@@ -47,6 +46,8 @@ Const dirN2=9
 Const IntroMusic=0
 Const KlingShields=200
 Const ShipMaxEnergy=5000
+Const MaxTorpedos=10
+Const ShieldsLow=200
 
 Const FCEr$="?FC ERROR"
 Const CoCoFont=4 '32x20
@@ -873,6 +874,7 @@ Sub CheckEnergyAlert
       ST=stYellow
       SignalAlert
       Return
+    End If
   End If
   ShowAlert ST
 End Sub
@@ -922,7 +924,7 @@ End Sub
 Sub UpdateTorpedo
   '1530
   If ST=stDocked Then
-    P=10
+    P=MaxTorpedos
   Else
     P=P-1
   End If
@@ -1156,7 +1158,7 @@ Sub ReadySector
 
   If K<>0 Then
 
-    If G<=200 Then
+    If G<=ShieldsLow Then
       If Z9=1 Or Z7=1 Then
         CombatAreaMsg
       Else
@@ -1190,31 +1192,8 @@ Sub EnterQuadrant
     ReadySector
   End If
 
-  UpdateCoords
-
-  If CL=1 Then
-    ShowCloakMsg
-  End If
-
-  If DNA(2)<0 Then
-    O=0:A=2
-    ShowInoperative
-  End If
-
   O=1
   LocalScanner
-
-  If K<>0 Then
-    If Z7=1 Then
-      If Rand(2)>1 Then
-        KlingonAttack
-        LocalScanner
-      End If
-    Else
-      Z7=1
-    End If
-  End If
-
 End Sub
 
 Sub ScanQuandrant
@@ -1234,7 +1213,6 @@ Sub ScanQuandrant
     If Z7=1 Then
       If Rand(2)>1 Then
         KlingonAttack
-        LocalScanner
       End If
     Else
       Z7=1
@@ -1559,6 +1537,7 @@ Sub KlingonAttack
   Next
 
   UpdateShields
+  LocalScanner
 End Sub
 
 Function PromptForCommand(sys)
@@ -1660,16 +1639,35 @@ Sub SetCourse
   EngageWarp
 End Sub
 
-Sub LocalScanner
+Sub LocalScanner(n)
   '310
+  UpdateCoords
+
+  If CL=1 Then
+    ShowCloakMsg
+  End If
+
   If DNA(2)<0 Then
     O=0:A=2
     ShowInoperative
-  Else
-    Local Z=38
-    For Y=1 To 8:For X=1 To 8
-      BlitLocalSanner x*2+Z, SNA(X,Y)
-    Next X:Z=Z+32:Next Y
+    Return
+  End If
+
+  Local Z=38
+  For Y=1 To 8:For X=1 To 8
+    BlitLocalSanner x*2+Z, SNA(X,Y)
+  Next X:Z=Z+32:Next Y
+
+  If n=0 Then Return
+
+  If K<>0 Then
+    If Z7=1 Then
+      If Rand(2)>1 Then
+        KlingonAttack
+      End If
+    Else
+      Z7=1
+    End If
   End If
 End Sub
 
@@ -2067,63 +2065,52 @@ Sub MainLoop
 
       CMD=PromptForCommand(Sys)
 
-      If Sys=syCMD Then
-        Select Case CMD
-          Case 1
-            SetCourse
-            ClearCMD Sys
-          Case 2
-            LocalScanner
-            ClearCMD Sys
-          Case 3
-            RemoteScanner
-            ClearCMD Sys
-          Case 4
-            FirePhasers
-            LocalScanner
-            ClearCMD Sys
-          Case 5
-            PhotonTorpedo
-            UpdateCoords
-            LocalScanner
-            ClearCMD Sys
-          Case 6
-            SetShields
-            ClearCMD Sys
-          Case 7
-            DamageReport
-            ClearCMD Sys
-          Case 8
-            Sys=syOPT
-            ClearCMD Sys
-        End Select
+      If Sys=syCMD And CMD>0 Then
+        If DNA(CMD)<0 Then
+          ShowInoperative
+        Else
+          Select Case CMD
+            Case 1
+              SetCourse
+            Case 2
+              LocalScanner 1
+            Case 3
+              RemoteScanner
+            Case 4
+              FirePhasers
+            Case 5
+              PhotonTorpedo
+              UpdateCoords
+            Case 6
+              SetShields
+            Case 7
+              DamageReport
+            Case 8
+              Sys=syOPT
+          End Select
+          ClearCMD Sys
+        End If
       End If
 
-      If Sys=syOPT Then
+      If Sys=syOPT And CMD>=0 Then
         Select Case CMD
           Case 0
             Sys=syCMD
-            ClearCMD Sys
           Case 1
             ComputerGuidance
-            ClearCMD Sys
           Case 2
             StatusReport
-            ClearCMD Sys
           Case 3
             TorpedoData
-            ClearCMD Sys
           Case 4
             ComputeCourse
-            ClearCMD Sys
           Case 5
             GuidedTorpedo
             Sys=syCMD
-            ClearCMD Sys
           Case 6
             MissionRecord
-            ClearCMD Sys
         End Select
+        ClearCMD Sys
       End If
 
       CycleviewBar
@@ -2140,4 +2127,3 @@ End Sub
 
 InitGame
 MainLoop
-
