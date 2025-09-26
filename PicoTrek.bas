@@ -48,6 +48,7 @@ Const KlingShields=200
 Const ShipMaxEnergy=5000
 Const MaxTorpedos=10
 Const ShieldsLow=200
+Const PauseTime=2000
 
 Const FCEr$="?FC ERROR"
 Const CoCoFont=4 '32x20
@@ -152,21 +153,28 @@ End Sub
 Sub MakeChars
   'Draw CoCo color characters
   MakeCharBox 0,0,RGB(green)
-  MakeCharBox 0,18,RGB(yellow)
-  MakeCharBox 0,36,RGB(blue)
-  MakeCharBox 0,54,RGB(red)
-  MakeCharBox 0,72,RGB(white)
-  MakeCharBox 0,90,RGB(cyan)
-  MakeCharBox 0,108,RGB(pink)
-  MakeCharBox 0,126,RGB(orange)
+  'MakeCharBox 0,18,RGB(yellow)
+  MakeCharBox 160,0,RGB(yellow)
+  'MakeCharBox 0,36,RGB(blue)
+  MakeCharBox 0,18,RGB(blue)
+  'MakeCharBox 0,54,RGB(red)
+  MakeCharBox 160,18,RGB(red)
+  'MakeCharBox 0,72,RGB(white)
+  MakeCharBox 0,36,RGB(white)
+  'MakeCharBox 0,90,RGB(cyan)
+  MakeCharBox 160,36,RGB(cyan)
+  'MakeCharBox 0,108,RGB(pink)
+  MakeCharBox 0,54,RGB(pink)
+  'MakeCharBox 0,126,RGB(orange)
+  MakeCharBox 160,54,RGB(orange)
 End Sub
 
 Sub BlitChar(n,c,f)
   '=Print@n,CHR$(c) c=128-256
   Local x=Int((n Mod 32)*10)
   Local y=(n\32)*18
-  Local cx=Int((c-128) Mod 16)*10)
-  Local cy=((c-128)\16)*18
+  Local cx=Int((c-128) Mod 32)*10)
+  Local cy=((c-128)\32)*18
 
   If f=0 Then
     Blit FrameBuffer F,N,cx,cy,x,y,10,18
@@ -263,7 +271,7 @@ Sub BlitViewBar(n)
   Const cx=0
   Const x=0
   Const y=288\32*18
-  Local cy=288\32*18+(n-1)*18
+  Local cy=128\32*18+(n-1)*18
   Blit FrameBuffer F,N,cx,cy,x,y,w,h
 End Sub
 
@@ -277,7 +285,7 @@ Sub MakeViewBars
   c2=YellowCorner
   c3=WhiteCorner
   c4=GreenOther
-  MakeViewBar 288,h1,h2,h3,c1,c2,c3,c4
+  MakeViewBar 128,h1,h2,h3,c1,c2,c3,c4
 
   h1=YellowHalf
   h2=WhiteHalf
@@ -286,7 +294,7 @@ Sub MakeViewBars
   c2=WhiteCorner
   c3=GreenCorner
   c4=YellowOther
-  MakeViewBar 320,h1,h2,h3,c1,c2,c3,c4
+  MakeViewBar 160,h1,h2,h3,c1,c2,c3,c4
 
   h1=WhiteHalf
   h2=GreenHalf
@@ -295,7 +303,7 @@ Sub MakeViewBars
   c2=GreenCorner
   c3=YellowCorner
   c4=WhiteOther
-  MakeViewBar 352,h1,h2,h3,c1,c2,c3,c4
+  MakeViewBar 192,h1,h2,h3,c1,c2,c3,c4
 End Sub
 
 Sub MakeAlert(n,c,f)
@@ -324,11 +332,21 @@ Sub MakeFrameBuffer
   Font CoCoFont
   CLS blk
 
+  'If MakeChars could double per line
+  'might be enough screen space on buffer
+  'to copy viewer area during klingon
+  'phasor attacks
+
   MakeChars
   MakeViewBars
   'MakeAlerts
+  Box 80,144,160,126,1,grn,c
 
   FRAMEBUFFER Write N
+
+  'Show FrameBuffer and Exit
+  'Blit FrameBuffer F,N,0,0,0,0,320,320
+  'End
 End Sub
 
 ' *************************************
@@ -568,6 +586,13 @@ Sub ShowAlert(n)
   PointToMessageArea
 End Sub
 
+Sub SoundAlert
+  Local ZZ
+  For ZZ=175 To 125 Step -4
+    SOUND ZZ,1
+  Next ZZ
+End Sub
+
 Sub BlitLocalSanner(n, v)
   Select Case v
     Case 0
@@ -633,12 +658,31 @@ Sub CycleViewBar
 
 End Sub
 
+Sub BackupViewer
+  Local a,b,c,d,w,h
+  a=80:b=18
+  c=80:d=144
+  w=160:h=144
+  Blit FrameBuffer N,F,a,b,c,d,w,h
+End Sub
+
+Sub RestoreViewer
+  Local a,b,c,d,w,h
+  a=80:b=144
+  c=80:d=18
+  w=160:h=144
+  Blit FrameBuffer F,N,a,b,c,d,w,h
+End Sub
+
 Sub FlashPhaserDamage
   '1360
   ' Flash for phaser hit
-  ' Can I make another framebuffer
-  ' that's just a yellow blank screen
-  ' then flash between normal and yellow?
+  ' Flash viewer yellow blank screen
+  ' then flash between black and yellow?
+  ' Better! Copy viewer to buffer,
+  ' flash yellow viewer, restore from
+  ' buffer
+  BackupViewer
   Local ZZ,ylw=RGB(Yellow)
   'Reduced to.125 from .25 since BOX command slows
   For ZZ=H*.125+1 To 1 Step -1
@@ -648,7 +692,8 @@ Sub FlashPhaserDamage
      'Just do the SOUND
      SOUND 255,1
     'SCREEN 0,0 'CAN'T EMULATE
-    ViewerBackground blk
+    'ViewerBackground blk
+    RestoreViewer
   Next
 End Sub
 
@@ -784,6 +829,7 @@ Sub LostGame
   Print "THERE ARE STILL ";
   Print Str$(KT)+" KLINGON "
   Print "BATTLE-CRUISERS SURVIVING."
+  LocalScanner
   End
 End Sub
 
@@ -810,7 +856,7 @@ Sub OutOfGas
   '1040
   Print "THE ";VS$;" IS DEAD IN SPACE.";
   Print "YOU ARE AT THE KLINGONS' MERCY"
-  Pause 2000*6
+  Pause PauseTime*6
   Do
     If K=0 Then
       LostGame
@@ -906,9 +952,7 @@ Sub SignalAlert
   Pause 1000
   ShowAlert stGreen
 
-  For ZZ=175 To 125 Step -4
-    SOUND ZZ,1
-  Next ZZ
+  SoundAlert
 
   If ST=stDocked Then
     SOUND 200,1
@@ -1005,7 +1049,7 @@ Sub SystemOut
     ClearMessageArea
     Print DSA$(7);" REPORT:"
     Print DSA$(R);" OUT";
-    Pause 2000
+    Pause PauseTime
     PointToMessageArea
 End Sub
 
@@ -1016,7 +1060,7 @@ Sub SystemUpgraded
   ClearMessageArea
   Print DSA$(7);" REPORT:"
   Print DSA$(R);" - UPGRADED"
-  Pause 2000
+  Pause PauseTime
   PointToMessageArea
 End Sub
 
@@ -1078,6 +1122,7 @@ Sub ShipCrashed
     Next
     If M2=5 Then ShipCrashBounce:Return
   End If
+  Print
   Print "NAVIGATIONAL ERROR: ";
   ShipCrashBounce
 End Sub
@@ -1193,40 +1238,17 @@ Sub EnterQuadrant
   End If
 
   O=1
-  LocalScanner
-End Sub
-
-Sub ScanQuandrant
-  '300
-  UpdateCoords
-  If CL=1 Then
-    ClearMessageArea
-    ShowCloakMsg
-  End If
-  If DNA(2)<0 Then
-    O=0:A=2
-    ShowInoperative
-    Return
-  End If
-  LocalScanner
-  If K<>0 Then
-    If Z7=1 Then
-      If Rand(2)>1 Then
-        KlingonAttack
-      End If
-    Else
-      Z7=1
-    End If
-  End If
+  LocalScanner 1
 End Sub
 
 Sub ShipCrashBounce
   '630
   X=X-X1:Y=Y-Y1:N=H-1
-  Print DSA$(1)+"SHUT DOWN AT SECTOR";
+  Print DSA$(1)
+  Print "SHUT DOWN AT SECTOR";
   Print Format$(X,"%2g");", ";
   Print Format$(Y,"%2g")
-  Pause 2000
+  Pause PauseTime
 End Sub
 
 Sub SetShipInQuadrant
@@ -1235,7 +1257,7 @@ Sub SetShipInQuadrant
   SNA(U,V)=snaShip
   UpdateEnergy
   If W>=1 Then UpdateStardate
-  ScanQuandrant
+  LocalScanner 1
 End Sub
 
 Sub UpdateEnergy
@@ -1253,7 +1275,7 @@ Sub CheckEnergy
   Print "YOU HAVE ";Str$(E);" UNITS ";
   Print "OF ENERGY. SHIELDS ARE TAKING ";
   Print Str$(G);"UNITS"
-  Pause 2000
+  Pause PauseTime
 
   If DNA(6)<0 Then
     Print "BUT, ";DSA$(6);" IS OUT.";
@@ -1348,16 +1370,16 @@ Sub GetCourseResult
 End Sub
 
 Sub TorpedoHitKlingon
- '920
- For I=1 To 3
-  If C=KNA(I,1) And D=KNA(I,2) Then
-   KNA(I,3)=-1
-   R=320
-   X=C:Y=D
-   DestroyKlingon
-  End If
- Next
- KlingonAttack
+  '920
+  For I=1 To 3
+   If C=KNA(I,1) And D=KNA(I,2) Then
+    KNA(I,3)=-1
+    R=320
+    X=C:Y=D
+    DestroyKlingon
+   End If
+  Next
+  KlingonAttack
 End Sub
 
 Sub ExplodeSector
@@ -1378,41 +1400,41 @@ Sub DestroyKlingon
   R=R+32
   KT=KT-1
   If KT=0 Then WinGame
-  Pause 2000
+  Pause PauseTime
   If K=0 Then CL=0
 End Sub
 
 Sub TorpedoHitStar
- '940
- PrintAt 352, BSA$(10)
- Print " CAPTURED BY STAR GRAVITYAT ";
- Print "SECTOR ";
- Print Str$(X,1)+","+Str$(Y,1)
- KlingonAttack
+  '940
+  PrintAt 352, BSA$(10)
+  Print " CAPTURED BY STAR GRAVITYAT ";
+  Print "SECTOR ";
+  Print Str$(X,1)+","+Str$(Y,1)
+  KlingonAttack
 End Sub
 
 Sub TorpedoHitBase
- '950
- Explosion
- PrintAt 320,"WELL DONE! STAR BASE "
- Print "DESTROYED!"
- B=B-1:BT=BT-1
- M2=4
- X=C:Y=D
- DestroySector
- PrintAt 352,"DAMAGE HAS THROWN YOU "
- Print "OFF COURSE"
- C=Rand(8):W=Rand(8)/2
- MoveShip
+  '950
+  Explosion
+  PrintAt 320,"WELL DONE! STAR BASE "
+  Print "DESTROYED!"
+  B=B-1:BT=BT-1
+  M2=4
+  X=C:Y=D
+  DestroySector
+  PrintAt 352,"DAMAGE HAS THROWN YOU "
+  Print "OFF COURSE"
+  C=Rand(8):W=Rand(8)/2
+  MoveShip
 End Sub
 
 Sub TorpedoMissed
- '960
- PrintAt 352,BSA$(10)
- Print " MISSED."
- Pause 2000
- KlingonAttack
- ScanQuandrant
+  '960
+  PrintAt 352,BSA$(10)
+  Print " MISSED."
+  Pause PauseTime
+  KlingonAttack
+  LocalScanner 1
 End Sub
 
 Sub DestroySector
@@ -1504,6 +1526,18 @@ Sub KlingonPhaserHit(I)
   R=R+32
 End Sub
 
+Sub CheckKlingonAttack
+  If K<>0 Then
+    If Z7=1 Then
+      If Rand(2)>1 Then
+        KlingonAttack
+      End If
+    Else
+      Z7=1
+    End If
+  End If
+End Sub
+
 Sub KlingonAttack
   '1020
   Local msg$
@@ -1537,7 +1571,7 @@ Sub KlingonAttack
   Next
 
   UpdateShields
-  LocalScanner
+  'LocalScanner
 End Sub
 
 Function PromptForCommand(sys)
@@ -1581,6 +1615,8 @@ Sub KlingonsEnterQuadrant
           Print "KLINGONS HAVE JUST ENTERED THIS QUADRANT"
           AddKlingons2Sect
           SetAlertStatus
+          LocalScanner 1
+          Return
         End If
       Next Q
     Next N
@@ -1595,13 +1631,13 @@ Sub IdleEvent
   UpgradeSystem
 
   If K<>0 Then
-    If Rnd(2)>1 Then
+    If Rand(2)>1 Then
       KlingonAttack
       Return
     End If
   Else
-    If Rnd(10)>8 Then
-      UpdateStarDate
+    If Rand(10)>8 Then
+      'UpdateStarDate
       KlingonsEnterQuadrant
     End If
   End If
@@ -1643,7 +1679,7 @@ Sub LocalScanner(n)
   '310
   UpdateCoords
 
-  If CL=1 Then
+  If CL=1 And n<>0 Then
     ShowCloakMsg
   End If
 
@@ -1658,17 +1694,8 @@ Sub LocalScanner(n)
     BlitLocalSanner x*2+Z, SNA(X,Y)
   Next X:Z=Z+32:Next Y
 
-  If n=0 Then Return
+  If n<>0 Then CheckKlingonAttack
 
-  If K<>0 Then
-    If Z7=1 Then
-      If Rand(2)>1 Then
-        KlingonAttack
-      End If
-    Else
-      Z7=1
-    End If
-  End If
 End Sub
 
 Sub RemoteScanner
@@ -1747,7 +1774,7 @@ Sub FirePhasers
         Print " (";
         Print Format$(KNA(I,3),"%3.0f");
         Print " LEFT)";
-        Pause 2000
+        Pause PauseTime
       End If
     End If
   Next
@@ -2014,14 +2041,14 @@ Sub InitStarDate
 End Sub
 
 Sub InitGame
+  CLS grn
+  Color blk,grn
+
   MakeFrameBuffer
 
   LoadSystems
   LoadCommands
   LoadCourseDeltas
-
-  CLS grn
-  Color blk,grn
 
   ShowAuthor
   BuildDisplay
@@ -2040,7 +2067,7 @@ Sub InitGame
   SoundAllClear
   ShowGoalMsg
 
-  Pause 2000
+  Pause PauseTime
 
   EnterQuadrant
 
@@ -2066,7 +2093,7 @@ Sub MainLoop
       CMD=PromptForCommand(Sys)
 
       If Sys=syCMD And CMD>0 Then
-        If DNA(CMD)<0 Then
+        If CMD>1 And DNA(CMD)<0 Then
           ShowInoperative
         Else
           Select Case CMD
