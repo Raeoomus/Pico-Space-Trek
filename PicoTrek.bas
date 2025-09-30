@@ -153,19 +153,12 @@ End Sub
 Sub MakeChars
   'Draw CoCo color characters
   MakeCharBox 0,0,RGB(green)
-  'MakeCharBox 0,18,RGB(yellow)
   MakeCharBox 160,0,RGB(yellow)
-  'MakeCharBox 0,36,RGB(blue)
   MakeCharBox 0,18,RGB(blue)
-  'MakeCharBox 0,54,RGB(red)
   MakeCharBox 160,18,RGB(red)
-  'MakeCharBox 0,72,RGB(white)
   MakeCharBox 0,36,RGB(white)
-  'MakeCharBox 0,90,RGB(cyan)
   MakeCharBox 160,36,RGB(cyan)
-  'MakeCharBox 0,108,RGB(pink)
   MakeCharBox 0,54,RGB(pink)
-  'MakeCharBox 0,126,RGB(orange)
   MakeCharBox 160,54,RGB(orange)
 End Sub
 
@@ -332,15 +325,9 @@ Sub MakeFrameBuffer
   Font CoCoFont
   CLS blk
 
-  'If MakeChars could double per line
-  'might be enough screen space on buffer
-  'to copy viewer area during klingon
-  'phasor attacks
-
   MakeChars
   MakeViewBars
   'MakeAlerts
-  Box 80,144,160,126,1,grn,c
 
   FRAMEBUFFER Write N
 
@@ -438,10 +425,10 @@ Sub PlayIntroNote
   '1700
   Local o1,n1,x
   o1=Rand(5):n1=Rand(12)
-  For x=33 To 100 Step 33
+  For x=1 To 100 Step 33
     Play volume x,x
-    PlayNote(o1,n1,40)
-    Pause 1
+    PlayNote(o1,n1,10)
+    Pause 20
   Next x
 End Sub
 
@@ -1248,6 +1235,7 @@ Sub ShipCrashBounce
   Print "SHUT DOWN AT SECTOR";
   Print Format$(X,"%2g");", ";
   Print Format$(Y,"%2g")
+  SetShipInQuadrant
   Pause PauseTime
 End Sub
 
@@ -1284,64 +1272,68 @@ Sub CheckEnergy
   End If
 End Sub
 
-Function TorpComp(dx,dy)
-  TorpComp=Abs(dx)/(Abs(dx)+Abs(dy))
-End Function
-
-Function GetTorpCourse(x1, y1, x2, y2)
-  Local dx, dy, tc
-  dx=x2-x1
-  dy=y2-y1
-
-  ' Handle special cases
-  If dx=0 And dy=0 Then
-    GetTorpCourse=0
-    Exit Function
-  End If
-
-  If dy=0 Then
-    If dx>0 Then
-      GetTorpCourse=dirE
-    Else
-      GetTorpCourse=dirW
-    End If
-    Exit Function
-  End If
-
-  If dx=0 Then
-    If dy>0 Then
-      GetTorpCourse=dirS
-    Else
-      GetTorpCourse=dirN
-    End If
-    Exit Function
-  End If
-
-  ' General cases
-  If dy<0 Then
-    If dx>0 Then
-      'NE quadrant:between 1(N) & 3(E)
-      tc=dirN+2*TorpComp(dx,dy)
-    Else
-      'NW quadrant:between 9&7 (wrap)
-      tc=dirN2-2*TorpComp(dx,dy)
-    End If
-  Else
-    If dx>0 Then
-      'SE quadrant:between 5(S) & 3(E)
-      tc=dirS-2*TorpComp(dx,dy)
-    Else
-      'SW quadrant:between 5(S) & 7(W)
-      tc=dirS+2*TorpComp(dx,dy)
-    End If
-  End If
-
-  GetTorpCourse=tc
+Function GetCourse(CC,A,W,X)
+  IF CC-W=0 AND A-X=0 THEN
+    CC=0:X=0:A=0
+  ELSE
+    X=X-A
+    A=CC-W
+    IF X<0 THEN
+      IF A>0 THEN
+        CC=dirW
+        IF ABS(A)>=ABS(X) THEN
+          CC=CC+ABS(X)/ABS(A)
+        ELSE
+          CC=CC+(((ABS(X)-ABS(A))+ABS(X))/ABS(X))
+        END IF
+      ELSE IF X=0 THEN
+        CC=dirE
+      ELSE
+        CC=dirN
+        IF ABS(A)<=ABS(X) THEN
+          CC=CC+ABS(A)/ABS(X)
+        ELSE
+          CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
+        END IF
+      END IF
+    ELSE IF A<0 THEN
+      CC=dirE
+      IF ABS(A)>=ABS(X) THEN
+        CC=CC+ABS(X)/ABS(A)
+      ELSE
+        CC=CC+(((ABS(X)-ABS(A))+ABS(X))/ABS(X))
+      END IF
+    ELSE IF X>0 THEN
+      CC=dirS
+      IF ABS(A)<=ABS(X) THEN
+        CC=CC+ABS(A)/ABS(X)
+      ELSE
+        CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
+      END IF
+    ELSE IF A=0 THEN
+      CC=dirN
+      IF ABS(A)<=ABS(X) THEN
+        CC=CC+ABS(A)/ABS(X)
+      ELSE
+        CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
+      END IF
+    ELSE
+      CC=dirS
+      IF ABS(A)<=ABS(X) THEN
+        CC=CC+ABS(A)/ABS(X)
+      ELSE
+        CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
+      END IF
+    END IF
+  END IF
+  
+  GetCourse=CC
 End Function
 
 Sub FindCourse(x1,y1,x2,y2)
   '1180
-  CC=GetTorpCourse(x1,y1,x2,y2)
+  'CC=GetTorpCourse(x1,y1,x2,y2)
+  CC=GetCourse(x1,y1,x2,y2)
   CD=Sqr((x2-x1)^2+(y2-y1)^2)
   OutputCourse CC,CD
 End Sub
@@ -1377,6 +1369,7 @@ Sub TorpedoHitKlingon
     R=320
     X=C:Y=D
     DestroyKlingon
+    Exit For '''
    End If
   Next
   KlingonAttack
