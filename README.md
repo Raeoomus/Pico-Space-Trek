@@ -8,6 +8,7 @@ https://www.clockworkpi.com/picocalc
 https://geoffg.net/Downloads/picomite/PicoMite_User_Manual.pdf
 
 ## Original TRS-80 Color Computer Code
+Color Computer Magazine, May 1983, pg 40-46
 https://archive.org/details/color-computer-magazine-1983-05/page/n37/mode/2up
 
 ## Free Online TRS-80 Color Computer Emulator
