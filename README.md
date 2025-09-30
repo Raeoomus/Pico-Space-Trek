@@ -19,5 +19,5 @@ https://geoffg.net/WindowsMMBasic.html
 ## Notes
 Currently uses PicoMite MMBasic Version 5.09.00RC5
 
-Still very much a work in progress.
-All the technical challenges should be solved not all systems working yet. A lot of nightmares untangling the GOTO hell of the original.
+Nearing finish. Minor issues remain. 
+Need to upgrade to Picomite 6.0.
