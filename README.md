@@ -13,7 +13,8 @@ https://archive.org/details/color-computer-magazine-1983-05/page/n37/mode/2up
 ## Free Online TRS-80 Color Computer Emulator
 https://colorcomputerarchive.com/test/xroar-online/
 
-Unfortunately, I am unaware of a PicoCalc emulator at this time.
+Unfortunately, I am unaware of a PicoCalc emulator at this time. However, there is an MMBasic emulator for Windows.
+https://geoffg.net/WindowsMMBasic.html
 
 ## Notes
 Currently uses PicoMite MMBasic Version 5.09.00RC5
