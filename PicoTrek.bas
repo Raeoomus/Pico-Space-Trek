@@ -554,7 +554,7 @@ Sub OutputCourse(CC,CD)
 End Sub
 
 Function GetAlertColor(n)
-  Local c=0
+  Local c=140 'Default green
   If n=stGreen Then c=140
   If n=stYellow Then c=156
   If n=stRed Then c=188
@@ -1038,6 +1038,7 @@ Sub SystemOut
     Print DSA$(R);" OUT";
     Pause PauseTime
     PointToMessageArea
+  End If
 End Sub
 
 Sub SystemUpgraded
@@ -1272,61 +1273,41 @@ Sub CheckEnergy
   End If
 End Sub
 
+Function Offset(v1, v2)
+  If Abs(v1)<=Abs(v2) Then
+    Offset=Abs(v1)/Abs(v2)
+  Else
+    Offset=((Abs(v1)-Abs(v2))+Abs(v1))/Abs(v1)
+  End If
+End Function
+
 Function GetCourse(CC,A,W,X)
-  IF CC-W=0 AND A-X=0 THEN
-    CC=0:X=0:A=0
-  ELSE
-    X=X-A
-    A=CC-W
-    IF X<0 THEN
-      IF A>0 THEN
-        CC=dirW
-        IF ABS(A)>=ABS(X) THEN
-          CC=CC+ABS(X)/ABS(A)
-        ELSE
-          CC=CC+(((ABS(X)-ABS(A))+ABS(X))/ABS(X))
-        END IF
-      ELSE IF X=0 THEN
-        CC=dirE
-      ELSE
-        CC=dirN
-        IF ABS(A)<=ABS(X) THEN
-          CC=CC+ABS(A)/ABS(X)
-        ELSE
-          CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
-        END IF
-      END IF
-    ELSE IF A<0 THEN
+  If CC-W=0 And A-X=0 Then
+    GetCourse=0
+    Exit Function
+  End If
+
+  X=X-A
+  A=CC-W
+
+  If X<0 Then
+    If A>0 Then
+      CC=dirW+Offset(X,A)
+    ElseIf X=0 Then
       CC=dirE
-      IF ABS(A)>=ABS(X) THEN
-        CC=CC+ABS(X)/ABS(A)
-      ELSE
-        CC=CC+(((ABS(X)-ABS(A))+ABS(X))/ABS(X))
-      END IF
-    ELSE IF X>0 THEN
-      CC=dirS
-      IF ABS(A)<=ABS(X) THEN
-        CC=CC+ABS(A)/ABS(X)
-      ELSE
-        CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
-      END IF
-    ELSE IF A=0 THEN
-      CC=dirN
-      IF ABS(A)<=ABS(X) THEN
-        CC=CC+ABS(A)/ABS(X)
-      ELSE
-        CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
-      END IF
-    ELSE
-      CC=dirS
-      IF ABS(A)<=ABS(X) THEN
-        CC=CC+ABS(A)/ABS(X)
-      ELSE
-        CC=CC+(((ABS(A)-ABS(X))+ABS(A))/ABS(A))
-      END IF
-    END IF
-  END IF
-  
+    Else
+      CC=dirN+Offset(A,X)
+    End If
+  Else If A<0 Then
+    CC=dirE+Offset(X,A)
+  Else If X>0 Then
+    CC=dirS+Offset(A,X)
+  Else If A=0 Then
+    CC=dirN+Offset(A,X)
+  Else
+    CC=dirS+Offset(A,X)
+  End If
+
   GetCourse=CC
 End Function
 
@@ -1403,6 +1384,8 @@ Sub TorpedoHitStar
   Print " CAPTURED BY STAR GRAVITYAT ";
   Print "SECTOR ";
   Print Str$(X,1)+","+Str$(Y,1)
+  Pause PauseTime
+  LocalScanner 1  
   KlingonAttack
 End Sub
 
@@ -2118,6 +2101,7 @@ Sub MainLoop
             Sys=syCMD
           Case 1
             ComputerGuidance
+            Sys=syCMD
           Case 2
             StatusReport
           Case 3
