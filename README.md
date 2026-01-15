@@ -1,6 +1,12 @@
 # Pico-Space-Trek
 A port of the game Space Trek by Jake Commander for the TRS-80 Color Computer that appeared in Color Computer Magazine in May 1983 to the ClockworkPi PicoCalc.
 
+<figure>
+  <img src="space-trek_screen_001.jpg" alt="screen 001" width="250"/>
+  <figcaption align="center"><sub>Sorry for the image quality</sub></figcaption>
+</figure>
+
+
 ## ClockworkPi PicoCalc
 https://www.clockworkpi.com/picocalc
 
