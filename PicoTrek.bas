@@ -1260,10 +1260,11 @@ End Sub
 Sub CheckEnergy
   '1460
   PointToMessageArea
-  'If G=0 Then OutOfGas
-  Print "YOU HAVE ";Str$(E);" UNITS ";
-  Print "OF ENERGY. SHIELDS ARE TAKING ";
-  Print Str$(G);"UNITS"
+  If G=0 Then OutOfGas
+  Print "YOU HAVE ";Format$(E,"%1.1f");
+  Print " UNITS OF ENERGY."
+  Print "SHIELDS ARE TAKING ";Str$(G);
+  Print " UNITS"
   Pause PauseTime
 
   If DNA(6)<0 Then
